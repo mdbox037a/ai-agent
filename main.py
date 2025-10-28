@@ -6,13 +6,6 @@ from google.genai import types
 
 
 def main():
-    if sys.argv[1] is None:
-        print("error: no prompt supplied")
-        sys.exit(1)
-    load_dotenv()
-    api_key = os.environ.get("GEMINI_API_KEY")
-    client = genai.Client(api_key=api_key)
-
     verbose = False
     if "--verbose" in sys.argv:
         verbose = True
@@ -22,6 +15,12 @@ def main():
             prompt_index = i
     user_prompt = sys.argv[prompt_index]
 
+    if user_prompt is None:
+        print("error: no prompt supplied")
+        sys.exit(1)
+    load_dotenv()
+    api_key = os.environ.get("GEMINI_API_KEY")
+    client = genai.Client(api_key=api_key)
     messages = [
         types.Content(role="user", parts=[types.Part(text=user_prompt)]),
     ]
