@@ -1,5 +1,6 @@
 import os
 import subprocess
+from google.genai import types
 
 
 def run_python_file(working_directory, file_path, args=[]):
@@ -34,3 +35,24 @@ def run_python_file(working_directory, file_path, args=[]):
         return output
     except Exception as e:
         print(f"Error: executing Python file: {e}")
+
+
+# ai agent schema information
+
+schema_run_python_file = types.FunctionDeclaration(
+    name="run_python_file",
+    description="Run a python program within the file at file_path, constrained to the working directory.",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "file_path": types.Schema(
+                type=types.Type.STRING,
+                description="The path to the python program file, relative to the working directory.",
+            ),
+            "args": types.Schema(
+                type=types.Type.STRING,
+                description="Any arguments to be supplied as arguments for the python program to be run, if any.",
+            ),
+        },
+    ),
+)
