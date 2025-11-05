@@ -8,6 +8,7 @@ from functions.get_files_info import schema_get_files_info
 from functions.get_file_content import schema_get_file_content
 from functions.write_file import schema_write_file
 from functions.run_python_file import schema_run_python_file
+from functions.call_function import call_function
 
 
 def main():
@@ -47,6 +48,12 @@ def main():
     if response.function_calls is not None:
         for call in response.function_calls:
             print(f"Calling function: {call.name}({call.args})")
+            result = call_function(call.name, **call.args)
+            if result.parts[0].function_response.response is None:
+                raise Exception("error: function call result error")
+            else:
+                if verbose is True:
+                    print(f"-> {result.parts[0].function_response.response}")
     else:
         print(response.text)
 
