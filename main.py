@@ -39,7 +39,7 @@ def main():
         types.Content(role="user", parts=[types.Part(text=user_prompt)]),
     ]
     iterations = 0
-    while iterations < MAX_ITERATIONS:
+    for i in range(MAX_ITERATIONS):
         try:
             response = client.models.generate_content(
                 model="gemini-2.0-flash-001",
@@ -49,22 +49,27 @@ def main():
                 ),
             )
 
-            for candidate in response.candidates:
+            made_tool_call = False
+
+            for candidate in response.candidates or []:
                 messages.append(candidate.content)
 
-            if response.function_calls is not None:
-                for call in response.function_calls:
-                    result = call_function(call)
-                    if result.parts[0].function_response.response is None:
-                        raise Exception("error: function call result error")
-                    else:
-                        messages.append(
-                            types.Content(role="user", parts=[types.Part(call)])
-                        )
-                        if verbose is True:
-                            print(f"-> {result.parts[0].function_response.response}")
+                for part in candidate.content.parts or []:
+                    if getattr(part, "function_call", None):
+                        made_tool_call = True
+                        call = part.function_call
+                        result = call_function(call)
 
-            if response.text is not None:
+                        if result.parts[0].function_response.response is None:
+                            raise Exception("error: function call result error")
+                        else:
+                            messages.append(result)
+                            if verbose is True:
+                                print(
+                                    f"-> {result.parts[0].function_response.response}"
+                                )
+
+            if not made_tool_call and response.text:
                 print(response.text)
                 if verbose is True:
                     prompt_tokens = response.usage_metadata.prompt_token_count
@@ -74,8 +79,6 @@ def main():
                         f"Prompt tokens: {prompt_tokens}\nResponse tokens: {response_tokens}"
                     )
                 break
-            else:
-                iterations += 1
         except Exception as e:
             print(f"error: {e}")
 
