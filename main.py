@@ -3,7 +3,7 @@ import sys
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-from config import system_prompt
+from config import system_prompt, MAX_ITERATIONS
 from functions.get_files_info import schema_get_files_info
 from functions.get_file_content import schema_get_file_content
 from functions.write_file import schema_write_file
@@ -38,29 +38,46 @@ def main():
     messages = [
         types.Content(role="user", parts=[types.Part(text=user_prompt)]),
     ]
-    response = client.models.generate_content(
-        model="gemini-2.0-flash-001",
-        contents=messages,
-        config=types.GenerateContentConfig(
-            tools=[available_functions], system_instruction=system_prompt
-        ),
-    )
-    if response.function_calls is not None:
-        for call in response.function_calls:
-            result = call_function(call)
-            if result.parts[0].function_response.response is None:
-                raise Exception("error: function call result error")
-            else:
-                if verbose is True:
-                    print(f"-> {result.parts[0].function_response.response}")
-    else:
-        print(response.text)
+    iterations = 0
+    while iterations < MAX_ITERATIONS:
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.0-flash-001",
+                contents=messages,
+                config=types.GenerateContentConfig(
+                    tools=[available_functions], system_instruction=system_prompt
+                ),
+            )
 
-    if verbose is True:
-        prompt_tokens = response.usage_metadata.prompt_token_count
-        response_tokens = response.usage_metadata.candidates_token_count
-        print(f"User prompt: {user_prompt}")
-        print(f"Prompt tokens: {prompt_tokens}\nResponse tokens: {response_tokens}")
+            for candidate in response.candidates:
+                messages.append(candidate.content)
+
+            if response.function_calls is not None:
+                for call in response.function_calls:
+                    result = call_function(call)
+                    if result.parts[0].function_response.response is None:
+                        raise Exception("error: function call result error")
+                    else:
+                        messages.append(
+                            types.Content(role="user", parts=[types.Part(call)])
+                        )
+                        if verbose is True:
+                            print(f"-> {result.parts[0].function_response.response}")
+
+            if response.text is not None:
+                print(response.text)
+                if verbose is True:
+                    prompt_tokens = response.usage_metadata.prompt_token_count
+                    response_tokens = response.usage_metadata.candidates_token_count
+                    print(f"User prompt: {user_prompt}")
+                    print(
+                        f"Prompt tokens: {prompt_tokens}\nResponse tokens: {response_tokens}"
+                    )
+                break
+            else:
+                iterations += 1
+        except Exception as e:
+            print(f"error: {e}")
 
 
 if __name__ == "__main__":
