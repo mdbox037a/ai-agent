@@ -1,4 +1,3 @@
-import os
 from google.genai import types
 from functions.get_files_info import get_files_info
 from functions.get_file_content import get_file_content
@@ -18,13 +17,14 @@ def call_function(function_call_part, verbose=False):
         "get_file_content": get_file_content,
         "run_python_file": run_python_file,
         "write_file": write_file,
-        "working_directory": working_directory,
     }
+    function_call_part.args["working_directory"] = working_directory
 
     try:
         function_to_call = function_mappings[function_call_part.name]
         function_result = function_to_call(**function_call_part.args)
-    except Exception:
+    except Exception as e:
+        print(e)
         return types.Content(
             role="tool",
             parts=[
