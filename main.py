@@ -47,8 +47,7 @@ def main():
     )
     if response.function_calls is not None:
         for call in response.function_calls:
-            print(f"Calling function: {call.name}({call.args})")
-            result = call_function(call.name, **call.args)
+            result = call_function(call)
             if result.parts[0].function_response.response is None:
                 raise Exception("error: function call result error")
             else:
